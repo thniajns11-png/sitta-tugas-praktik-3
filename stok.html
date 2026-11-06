@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stok Bahan Ajar — SITTA</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app" class="page-wrap">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="topbar-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        SITTA
+      </a>
+      <nav>
+        <ul class="topbar-nav">
+          <li><a href="index.html">Beranda</a></li>
+          <li><a href="stok.html" class="active">Stok Bahan Ajar</a></li>
+          <li><a href="tracking.html">Tracking DO</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <div class="page-header d-flex align-center page-header-row">
+      <div>
+        <h1>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Stok Bahan Ajar
+        </h1>
+        <p>Inventaris bahan ajar seluruh UT-Daerah</p>
+      </div>
+      <button class="btn btn-primary" @click="openAddModal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Tambah Bahan Ajar
+      </button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Item</div>
+        <div class="stat-value">{{ totalStok }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stok Aman</div>
+        <div class="stat-value ok">{{ countAman }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stok Menipis</div>
+        <div class="stat-value warn">{{ countMenipis }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Stok Kosong</div>
+        <div class="stat-value danger">{{ countKosong }}</div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <!-- Search -->
+      <div class="form-group" style="flex:2; min-width:200px;">
+        <label>Cari</label>
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="Kode, judul, atau lokasi rak…"
+          />
+        </div>
+      </div>
+
+      <!-- Filter UT-Daerah -->
+      <div class="form-group">
+        <label>UT-Daerah</label>
+        <select v-model="filterUpbjj">
+          <option value="">Semua UT-Daerah</option>
+          <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+        </select>
+      </div>
+
+      <!-- Filter Kategori — hanya muncul jika UT-Daerah dipilih -->
+      <div class="form-group" v-if="filterUpbjj">
+        <label>Kategori</label>
+        <select v-model="filterKategori">
+          <option value="">Semua Kategori</option>
+          <option v-for="k in filteredKategoriOptions" :key="k" :value="k">{{ k }}</option>
+        </select>
+      </div>
+
+      <!-- Checkboxes -->
+      <div class="form-group filter-checks-group">
+        <span class="filter-checks-label">Filter Stok</span>
+        <div class="filter-checks">
+          <label class="check-item" for="chk-reorder">
+            <input id="chk-reorder" type="checkbox" v-model="filterReorder" />
+            Perlu Reorder
+          </label>
+          <label class="check-item" for="chk-kosong">
+            <input id="chk-kosong" type="checkbox" v-model="filterKosong" />
+            Stok Kosong
+          </label>
+        </div>
+        <span
+          v-if="filterReorder && filterKosong"
+          style="font-size:11.5px; color:var(--c-muted); margin-top:2px;"
+        >Menampilkan item menipis &amp; kosong</span>
+      </div>
+
+      <!-- Reset -->
+      <div class="form-group" style="justify-content:flex-end; min-width:auto; flex:0;">
+        <span style="font-size:12px; visibility:hidden;">x</span>
+        <button class="btn btn-secondary" @click="resetFilters" v-if="isFilterActive">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.6"/></svg>
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" :class="{ 'sort-active': sortField === 'kode' }" @click="setSort('kode')">
+              Kode / Judul {{ sortIcon('kode') }}
+            </th>
+            <th>Kategori</th>
+            <th>UT-Daerah</th>
+            <th>Lokasi Rak</th>
+            <th class="sortable" :class="{ 'sort-active': sortField === 'qty' }" @click="setSort('qty')">
+              Stok {{ sortIcon('qty') }}
+            </th>
+            <th>Safety</th>
+            <th>Status</th>
+            <th class="sortable" :class="{ 'sort-active': sortField === 'harga' }" @click="setSort('harga')">
+              Harga {{ sortIcon('harga') }}
+            </th>
+            <th class="sortable" :class="{ 'sort-active': sortField === 'judul' }" @click="setSort('judul')">
+              Judul {{ sortIcon('judul') }}
+            </th>
+            <th>Catatan</th>
+            <th style="width:56px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows -->
+          <template v-for="item in filteredStok" :key="item.id">
+            <tr>
+              <td>
+                <div class="fw-semibold td-mono">{{ item.kode }}</div>
+              </td>
+              <td>
+                <span class="badge badge-ok" style="background:#EFF6FF; color:#1E40AF; font-weight:500;">{{ item.kategori }}</span>
+              </td>
+              <td>{{ item.upbjj }}</td>
+              <td class="td-mono">{{ item.lokasiRak }}</td>
+              <td class="fw-semibold">{{ item.qty }}</td>
+              <td class="text-muted">{{ item.safety }}</td>
+              <td>
+                <span :class="['badge', statusBadge(item).cls]">
+                  <!-- Aman: check icon -->
+                  <svg v-if="item.qty >= item.safety" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <!-- Menipis: warning icon -->
+                  <svg v-else-if="item.qty > 0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <!-- Kosong: x-circle icon -->
+                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  {{ statusBadge(item).label }}
+                </span>
+              </td>
+              <td>{{ formatRupiah(item.harga) }}</td>
+              <td style="max-width:200px;">
+                <div class="text-sm" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="item.judul">{{ item.judul }}</div>
+              </td>
+              <td style="max-width:200px; font-size:13px;" v-html="item.catatanHTML"></td>
+              <td>
+                <button class="btn-icon" @click="openEditModal(item)" :title="'Edit ' + item.kode" :aria-label="'Edit bahan ajar ' + item.kode">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              </td>
+            </tr>
+          </template>
+
+          <!-- Empty state inside table -->
+          <tr v-if="filteredStok.length === 0">
+            <td colspan="10" style="text-align:center; padding:48px 20px; color:var(--c-muted);">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px; display:block; opacity:.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <p style="font-size:14px;">Tidak ada data yang cocok dengan filter saat ini.</p>
+              <button class="btn btn-ghost btn-sm" @click="resetFilters" style="margin-top:10px;" v-if="isFilterActive">Hapus filter</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-8 text-muted text-sm">
+      Menampilkan {{ filteredStok.length }} dari {{ totalStok }} item
+    </div>
+
+  </main>
+
+  <!-- ══ MODAL: Tambah Bahan Ajar ══════════════════════════ -->
+  <div class="modal-overlay" v-if="showAddModal" @click.self="closeAddModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+      <div class="modal-header">
+        <span class="modal-title" id="add-modal-title">Tambah Bahan Ajar Baru</span>
+        <button class="btn-icon" @click="closeAddModal" title="Tutup">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Kode -->
+          <div class="form-group">
+            <label for="add-kode">Kode MK <span class="required-mark">*</span></label>
+            <input id="add-kode" type="text" v-model="formAdd.kode" :class="{ 'is-error': formAddErrors.kode }" placeholder="mis. EKMA4116" />
+            <span class="error-msg" v-if="formAddErrors.kode">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.kode }}
+            </span>
+          </div>
+
+          <!-- Lokasi Rak -->
+          <div class="form-group">
+            <label for="add-rak">Lokasi Rak <span class="required-mark">*</span></label>
+            <input id="add-rak" type="text" v-model="formAdd.lokasiRak" :class="{ 'is-error': formAddErrors.lokasiRak }" placeholder="mis. R1-A3" />
+            <span class="error-msg" v-if="formAddErrors.lokasiRak">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.lokasiRak }}
+            </span>
+          </div>
+
+          <!-- Judul -->
+          <div class="form-group span-2">
+            <label for="add-judul">Judul <span class="required-mark">*</span></label>
+            <input id="add-judul" type="text" v-model="formAdd.judul" :class="{ 'is-error': formAddErrors.judul }" placeholder="Nama lengkap bahan ajar" />
+            <span class="error-msg" v-if="formAddErrors.judul">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.judul }}
+            </span>
+          </div>
+
+          <!-- Kategori -->
+          <div class="form-group">
+            <label for="add-kategori">Kategori <span class="required-mark">*</span></label>
+            <select id="add-kategori" v-model="formAdd.kategori" :class="{ 'is-error': formAddErrors.kategori }">
+              <option value="">Pilih kategori…</option>
+              <option v-for="k in kategoriList" :key="k" :value="k">{{ k }}</option>
+            </select>
+            <span class="error-msg" v-if="formAddErrors.kategori">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.kategori }}
+            </span>
+          </div>
+
+          <!-- UT-Daerah -->
+          <div class="form-group">
+            <label for="add-upbjj">UT-Daerah <span class="required-mark">*</span></label>
+            <select id="add-upbjj" v-model="formAdd.upbjj" :class="{ 'is-error': formAddErrors.upbjj }">
+              <option value="">Pilih UT-Daerah…</option>
+              <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+            </select>
+            <span class="error-msg" v-if="formAddErrors.upbjj">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.upbjj }}
+            </span>
+          </div>
+
+          <!-- Harga -->
+          <div class="form-group">
+            <label for="add-harga">Harga (Rp) <span class="required-mark">*</span></label>
+            <input id="add-harga" type="number" v-model="formAdd.harga" :class="{ 'is-error': formAddErrors.harga }" placeholder="mis. 65000" min="0" />
+            <span class="error-msg" v-if="formAddErrors.harga">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.harga }}
+            </span>
+          </div>
+
+          <!-- Qty -->
+          <div class="form-group">
+            <label for="add-qty">Jumlah Stok <span class="required-mark">*</span></label>
+            <input id="add-qty" type="number" v-model="formAdd.qty" :class="{ 'is-error': formAddErrors.qty }" placeholder="mis. 20" min="0" />
+            <span class="error-msg" v-if="formAddErrors.qty">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.qty }}
+            </span>
+          </div>
+
+          <!-- Safety -->
+          <div class="form-group">
+            <label for="add-safety">Safety Stock <span class="required-mark">*</span></label>
+            <input id="add-safety" type="number" v-model="formAdd.safety" :class="{ 'is-error': formAddErrors.safety }" placeholder="mis. 10" min="0" />
+            <span class="error-msg" v-if="formAddErrors.safety">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formAddErrors.safety }}
+            </span>
+          </div>
+
+          <!-- Catatan HTML -->
+          <div class="form-group span-2">
+            <label for="add-catatan">Catatan <span style="font-weight:400; color:var(--c-muted);">(opsional — tag: &lt;em&gt;, &lt;strong&gt;, &lt;u&gt;, &lt;i&gt;)</span></label>
+            <textarea id="add-catatan" v-model="formAdd.catatanHTML" placeholder="mis. &lt;em&gt;Edisi revisi 2024&lt;/em&gt;" rows="3"></textarea>
+            <span style="font-size:11.5px; color:var(--c-muted);">Hanya tag semantik sederhana yang diizinkan. Atribut dan skrip akan dihapus otomatis.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="closeAddModal">Batal</button>
+        <button class="btn btn-primary" @click="submitAdd">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: Edit Bahan Ajar ═════════════════════════════ -->
+  <div class="modal-overlay" v-if="showEditModal" @click.self="closeEditModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+      <div class="modal-header">
+        <span class="modal-title" id="edit-modal-title">Edit Bahan Ajar</span>
+        <button class="btn-icon" @click="closeEditModal" title="Tutup">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Kode (readonly in edit) -->
+          <div class="form-group">
+            <label for="edit-kode">Kode MK</label>
+            <input id="edit-kode" type="text" v-model="formEdit.kode" :class="{ 'is-error': formEditErrors.kode }" />
+            <span class="error-msg" v-if="formEditErrors.kode">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.kode }}
+            </span>
+          </div>
+
+          <!-- Lokasi Rak -->
+          <div class="form-group">
+            <label for="edit-rak">Lokasi Rak <span class="required-mark">*</span></label>
+            <input id="edit-rak" type="text" v-model="formEdit.lokasiRak" :class="{ 'is-error': formEditErrors.lokasiRak }" />
+            <span class="error-msg" v-if="formEditErrors.lokasiRak">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.lokasiRak }}
+            </span>
+          </div>
+
+          <!-- Judul -->
+          <div class="form-group span-2">
+            <label for="edit-judul">Judul <span class="required-mark">*</span></label>
+            <input id="edit-judul" type="text" v-model="formEdit.judul" :class="{ 'is-error': formEditErrors.judul }" />
+            <span class="error-msg" v-if="formEditErrors.judul">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.judul }}
+            </span>
+          </div>
+
+          <!-- Kategori -->
+          <div class="form-group">
+            <label for="edit-kategori">Kategori <span class="required-mark">*</span></label>
+            <select id="edit-kategori" v-model="formEdit.kategori" :class="{ 'is-error': formEditErrors.kategori }">
+              <option v-for="k in kategoriList" :key="k" :value="k">{{ k }}</option>
+            </select>
+            <span class="error-msg" v-if="formEditErrors.kategori">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.kategori }}
+            </span>
+          </div>
+
+          <!-- UT-Daerah -->
+          <div class="form-group">
+            <label for="edit-upbjj">UT-Daerah <span class="required-mark">*</span></label>
+            <select id="edit-upbjj" v-model="formEdit.upbjj" :class="{ 'is-error': formEditErrors.upbjj }">
+              <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+            </select>
+            <span class="error-msg" v-if="formEditErrors.upbjj">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.upbjj }}
+            </span>
+          </div>
+
+          <!-- Harga -->
+          <div class="form-group">
+            <label for="edit-harga">Harga (Rp) <span class="required-mark">*</span></label>
+            <input id="edit-harga" type="number" v-model="formEdit.harga" :class="{ 'is-error': formEditErrors.harga }" min="0" />
+            <span class="error-msg" v-if="formEditErrors.harga">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.harga }}
+            </span>
+          </div>
+
+          <!-- Qty -->
+          <div class="form-group">
+            <label for="edit-qty">Jumlah Stok <span class="required-mark">*</span></label>
+            <input id="edit-qty" type="number" v-model="formEdit.qty" :class="{ 'is-error': formEditErrors.qty }" min="0" />
+            <span class="error-msg" v-if="formEditErrors.qty">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.qty }}
+            </span>
+          </div>
+
+          <!-- Safety -->
+          <div class="form-group">
+            <label for="edit-safety">Safety Stock <span class="required-mark">*</span></label>
+            <input id="edit-safety" type="number" v-model="formEdit.safety" :class="{ 'is-error': formEditErrors.safety }" min="0" />
+            <span class="error-msg" v-if="formEditErrors.safety">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ formEditErrors.safety }}
+            </span>
+          </div>
+
+          <!-- Catatan -->
+          <div class="form-group span-2">
+            <label for="edit-catatan">Catatan <span style="font-weight:400; color:var(--c-muted);">(opsional — tag: &lt;em&gt;, &lt;strong&gt;, &lt;u&gt;, &lt;i&gt;)</span></label>
+            <textarea id="edit-catatan" v-model="formEdit.catatanHTML" rows="3"></textarea>
+            <span style="font-size:11.5px; color:var(--c-muted);">Hanya tag semantik sederhana yang diizinkan. Atribut dan skrip akan dihapus otomatis.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="closeEditModal">Batal</button>
+        <button class="btn btn-primary" @click="submitEdit">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container">
+    <div
+      v-for="t in toasts"
+      :key="t.id"
+      :class="['toast', 'toast-' + t.type]"
+      @click="removeToast(t.id)"
+    >
+      <!-- success icon -->
+      <svg v-if="t.type === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <!-- warn icon -->
+      <svg v-else-if="t.type === 'warn'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <!-- error icon -->
+      <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      {{ t.message }}
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    SITTA &mdash; Universitas Terbuka &copy; 2025
+  </footer>
+
+</div>
+
+<!-- Scripts -->
+<script src="js/dataBahanAjar.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/dompurify@3.0.6/dist/purify.min.js"></script>
+<script src="js/stok-app.js"></script>
+</body>
+</html>
