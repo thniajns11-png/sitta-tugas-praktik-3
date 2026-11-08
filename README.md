@@ -110,8 +110,8 @@ sitta/
 | `templates/` | Template HTML terpisah yang dimuat asinkron oleh `app.js`. |
 | `js/services/api.js` | Mengambil dan menormalisasi data dari `dataBahanAjar.json`; menyediakan data cadangan (fallback). |
 | `js/vue.js` | Distribusi lokal Vue.js 2.7.16. |
-| `data/` | Menyediakan sumber data JSON aplikasi. |
-| `reference/` | Dokumen soal dan data referensi tugas (tidak dimodifikasi). |
+| `data/` | Menyimpan `dataBahanAjar.json` yang digunakan aplikasi saat runtime; dibaca oleh `apiService.fetchData()` setiap kali aplikasi dimuat. |
+| `reference/` | Menyimpan dokumen soal dan data referensi pembanding. **Folder ini tidak dibaca oleh aplikasi saat runtime** dan tidak memengaruhi data yang dimuat aplikasi. |
 | `stok.html`, `tracking.html`, dan skrip terkait | File legacy dari implementasi Multi-Page Application (MPA) sebelumnya; dipertahankan untuk referensi. |
 
 ---
@@ -211,11 +211,12 @@ Root Vue mengelola seluruh state aplikasi (`stokList`, `tracking`, `paketList`, 
 
 > **Penting untuk dipahami:**
 
-- Data awal aplikasi berasal dari file `data/dataBahanAjar.json`.
-- File JSON ini merupakan **data dummy**, bukan database yang sesungguhnya.
+- Saat runtime, aplikasi membaca **`data/dataBahanAjar.json`** melalui `apiService.fetchData()`. File ini merupakan satu-satunya sumber data yang digunakan aplikasi.
+- Folder **`reference/`** hanya berfungsi sebagai arsip referensi akademik dan data pembanding. Folder ini **tidak dibaca oleh aplikasi saat runtime**; perubahan pada file di dalamnya tidak memengaruhi data yang dimuat aplikasi.
+- File JSON dalam `reference/` merupakan **data dummy**, bukan database yang sesungguhnya.
 - Operasi tambah, edit, hapus stok serta pembuatan DO berjalan pada **state aplikasi di memori browser**.
 - Perubahan tersebut **tidak tersimpan secara permanen**.
-- Memuat ulang halaman (refresh) akan mengembalikan data ke kondisi awal dari file JSON.
+- Memuat ulang halaman (refresh) akan mengembalikan data ke kondisi awal dari `data/dataBahanAjar.json`.
 - Aplikasi saat ini **belum menggunakan backend atau database permanen**.
 
 ---
