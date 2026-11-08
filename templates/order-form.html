@@ -1,0 +1,211 @@
+<div class="order-form-component">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      <span v-text="'Formulir Pemesanan Bahan Ajar (Delivery Order)'"></span>
+    </h1>
+    <p v-text="'Buat Delivery Order baru untuk pengiriman paket bahan ajar ke mahasiswa'"></p>
+  </div>
+
+  <div class="tracking-layout">
+
+    <!-- Card Form Pemesanan -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Input Data Delivery Order
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--c-muted);">
+          <span>Nomor DO Otomatis:</span>
+          <span class="nomor-do-display" v-text="generatedNomorDO"></span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="form-grid">
+
+          <!-- NIM Mahasiswa -->
+          <div class="form-group">
+            <label for="order-nim">NIM Mahasiswa <span class="required-mark">*</span></label>
+            <input
+              id="order-nim"
+              type="text"
+              v-model="form.nim"
+              :class="{ 'is-error': errors.nim }"
+              placeholder="mis. 123456789"
+              maxlength="12"
+            />
+            <span class="error-msg" v-if="errors.nim" v-text="errors.nim"></span>
+          </div>
+
+          <!-- Nama Mahasiswa -->
+          <div class="form-group">
+            <label for="order-nama">Nama Lengkap Mahasiswa <span class="required-mark">*</span></label>
+            <input
+              id="order-nama"
+              type="text"
+              v-model="form.nama"
+              :class="{ 'is-error': errors.nama }"
+              placeholder="Nama lengkap mahasiswa"
+            />
+            <span class="error-msg" v-if="errors.nama" v-text="errors.nama"></span>
+          </div>
+
+          <!-- Ekspedisi -->
+          <div class="form-group">
+            <label for="order-ekspedisi">Layanan Ekspedisi Pengiriman <span class="required-mark">*</span></label>
+            <select
+              id="order-ekspedisi"
+              v-model="form.ekspedisi"
+              :class="{ 'is-error': errors.ekspedisi }"
+            >
+              <option value="">Pilih layanan ekspedisi…</option>
+              <option
+                v-for="e in ekspedisiList"
+                :key="e.kode"
+                :value="e.kode"
+                v-text="e.nama"
+              ></option>
+            </select>
+            <span class="error-msg" v-if="errors.ekspedisi" v-text="errors.ekspedisi"></span>
+          </div>
+
+          <!-- Tanggal Kirim (Date / Local Time) -->
+          <div class="form-group">
+            <label for="order-tanggal">Tanggal Kirim <span class="required-mark">*</span></label>
+            <div style="display: flex; gap: 8px;">
+              <input
+                id="order-tanggal"
+                type="date"
+                v-model="form.tanggalKirim"
+                :class="{ 'is-error': errors.tanggalKirim }"
+                style="flex: 1;"
+              />
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="setToday"
+                title="Gunakan tanggal hari ini"
+              >
+                Hari ini
+              </button>
+            </div>
+            <span class="error-msg" v-if="errors.tanggalKirim" v-text="errors.tanggalKirim"></span>
+          </div>
+
+          <!-- Paket Bahan Ajar (Select kode & nama, span 2) -->
+          <div class="form-group span-2">
+            <label for="order-paket">Pilihan Paket Bahan Ajar <span class="required-mark">*</span></label>
+            <select
+              id="order-paket"
+              v-model="form.paketKode"
+              :class="{ 'is-error': errors.paketKode }"
+            >
+              <option value="">Pilih paket bahan ajar…</option>
+              <option
+                v-for="p in paketList"
+                :key="p.kode"
+                :value="p.kode"
+              >
+                {{ p.kode }} — {{ p.nama }} ({{ p.harga | rupiah }})
+              </option>
+            </select>
+            <span class="error-msg" v-if="errors.paketKode" v-text="errors.paketKode"></span>
+
+            <!-- Rincian Isi Paket (Muncul setelah memilih paket) -->
+            <div class="detail-box mt-8" v-if="selectedPaket">
+              <div class="detail-box-title">RINCIAN BUKU MODUL DALAM PAKET</div>
+              <ul class="detail-list">
+                <li v-for="item in paketIsiDetail" :key="item.kode">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--c-accent); flex-shrink: 0;">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                  <span class="td-mono fw-semibold" style="margin-right: 6px;" v-text="item.kode"></span>
+                  <span v-text="item.judul"></span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" @click="resetForm">
+          Bersihkan Formulir
+        </button>
+        <button class="btn btn-primary" @click="submitOrder">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Simpan Delivery Order Baru
+        </button>
+      </div>
+    </div>
+
+    <!-- Card Ringkasan Pemesanan -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            Ringkasan Pemesanan DO
+          </span>
+        </div>
+        <div class="card-body" style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <div class="info-label mb-8">Nomor DO Terjadwal:</div>
+            <span class="nomor-do-display" v-text="generatedNomorDO"></span>
+          </div>
+
+          <hr class="divider" style="margin: 4px 0;" />
+
+          <div class="info-grid">
+            <div>
+              <div class="info-label">NIM Mahasiswa</div>
+              <div class="info-value">{{ form.nim || '—' }}</div>
+            </div>
+            <div>
+              <div class="info-label">Nama Mahasiswa</div>
+              <div class="info-value" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ form.nama || '—' }}</div>
+            </div>
+            <div>
+              <div class="info-label">Ekspedisi</div>
+              <div class="info-value">{{ selectedEkspedisiNama }}</div>
+            </div>
+            <div>
+              <div class="info-label">Tanggal Kirim</div>
+              <div class="info-value">{{ form.tanggalKirim | formatTanggal }}</div>
+            </div>
+            <div style="grid-column: span 2;">
+              <div class="info-label">Paket Terpilih</div>
+              <div class="info-value">{{ selectedPaket ? selectedPaket.nama : '—' }}</div>
+            </div>
+          </div>
+
+          <!-- Total Harga (Filter Rupiah) -->
+          <div class="total-box mt-8">
+            <span class="total-label">Total Pembayaran</span>
+            <span class="total-value">{{ form.totalHarga | rupiah }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+

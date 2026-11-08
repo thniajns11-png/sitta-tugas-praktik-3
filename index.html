@@ -4,74 +4,157 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SITTA — Sistem Informasi Tiras dan Transaksi Bahan Ajar UT</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
-  <div class="page-wrap">
+  <!-- Root Vue Single Page Application Container -->
+  <div id="app" class="page-wrap">
 
-    <!-- Topbar -->
+    <!-- Topbar & Navigasi Tab -->
     <header class="topbar">
       <div class="topbar-inner">
-        <a href="index.html" class="topbar-brand">
+        <a href="#" class="topbar-brand" @click.prevent="switchTab('stok')">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
           </svg>
-          SITTA
+          <span>SITTA</span>
         </a>
+
+        <!-- Navigasi Tiga Tab SPA -->
         <nav>
           <ul class="topbar-nav">
-            <li><a href="index.html" class="active">Beranda</a></li>
-            <li><a href="stok.html">Stok Bahan Ajar</a></li>
-            <li><a href="tracking.html">Tracking DO</a></li>
+            <li>
+              <button
+                type="button"
+                :class="{ active: currentTab === 'stok' }"
+                @click="switchTab('stok')"
+                title="Kelola stok dan inventaris bahan ajar"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span>Stok Bahan Ajar</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                :class="{ active: currentTab === 'tracking' }"
+                @click="switchTab('tracking')"
+                title="Pelacakan pengiriman Delivery Order"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <span>Tracking DO</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                :class="{ active: currentTab === 'order' }"
+                @click="switchTab('order')"
+                title="Formulir pemesanan paket bahan ajar baru"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span>Pemesanan DO</span>
+              </button>
+            </li>
           </ul>
         </nav>
       </div>
     </header>
 
-    <!-- Main -->
+    <!-- Konten Utama Aplikasi (SPA Views) -->
     <main class="main-content">
 
-      <!-- Hero -->
-      <section class="hero">
-        <div class="hero-sub">Universitas Terbuka</div>
-        <h1>Sistem Informasi Tiras<br>dan Transaksi Bahan Ajar</h1>
-        <p>Kelola stok, pesanan, dan distribusi bahan ajar UT secara terpusat. Pantau status pengiriman Delivery Order secara real-time.</p>
-        <div class="hero-actions">
-          <a href="stok.html" class="btn btn-primary">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            Kelola Stok
-          </a>
-          <a href="tracking.html" class="btn-outline">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Tracking DO
-          </a>
+      <!-- Loading State -->
+      <div class="card mb-24" v-if="isLoading" style="padding: 48px 24px; text-align: center;">
+        <div class="empty-state">
+          <div class="spinner mb-16"></div>
+          <p style="font-weight: 600; color: var(--c-text); font-size: 15px;">Memuat Data SITTA…</p>
+          <p style="font-size: 13px; color: var(--c-muted); margin-top: 4px;">Mengambil inventaris bahan ajar dan data Delivery Order dari server</p>
         </div>
-      </section>
+      </div>
 
-      <!-- Nav Cards -->
-      <div class="nav-cards">
-        <a href="stok.html" class="nav-card">
-          <div class="nav-card-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      <!-- Error State -->
+      <div class="card mb-24" v-else-if="errorMessage" style="padding: 32px 24px; text-align: center;">
+        <div class="empty-state">
+          <div class="empty-state-icon" style="background: var(--c-danger-lite); color: var(--c-destructive); margin: 0 auto 12px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
           </div>
-          <h3>Stok Bahan Ajar</h3>
-          <p>Lihat dan kelola inventaris bahan ajar seluruh UT-Daerah. Tambah item baru, edit data stok, dan pantau level ketersediaan.</p>
-        </a>
+          <p style="font-weight: 600; color: var(--c-destructive); margin-bottom: 6px; font-size: 15px;">Gagal Memuat Data</p>
+          <p style="font-size: 13.5px; color: var(--c-text); max-width: 480px; margin: 0 auto 16px;" v-text="errorMessage"></p>
+          <button type="button" class="btn btn-primary btn-sm" @click="loadInitialData">Coba Lagi</button>
+        </div>
+      </div>
 
-        <a href="tracking.html" class="nav-card">
-          <div class="nav-card-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-          </div>
-          <h3>Tracking Delivery Order</h3>
-          <p>Buat Delivery Order baru dan lacak status pengiriman bahan ajar ke mahasiswa berdasarkan nomor DO.</p>
-        </a>
+      <!-- Kontainer Komponen Tab (v-show mempertahankan state internal komponen saat berpindah tab) -->
+      <div v-else>
+
+        <!-- Tab 1: Stok Bahan Ajar -->
+        <section v-show="currentTab === 'stok'">
+          <ba-stock-table
+            :items="stokList"
+            :upbjj-list="upbjjList"
+            :kategori-list="kategoriList"
+            @update-stock="handleStockUpdate"
+            @toast="showToast"
+          ></ba-stock-table>
+        </section>
+
+        <!-- Tab 2: Tracking Delivery Order -->
+        <section v-show="currentTab === 'tracking'">
+          <do-tracking
+            :tracking="tracking"
+            :paket-list="paketList"
+            :stok-list="stokList"
+            @add-progress="handleAddProgress"
+            @toast="showToast"
+          ></do-tracking>
+        </section>
+
+        <!-- Tab 3: Pemesanan Delivery Order -->
+        <section v-show="currentTab === 'order'">
+          <order-form
+            :paket="paketList"
+            :ekspedisi="pengirimanList"
+            :tracking="tracking"
+            :stok-list="stokList"
+            @created="handleOrderCreated"
+            @toast="showToast"
+          ></order-form>
+        </section>
+
       </div>
 
     </main>
+
+    <!-- Global Toast Notification Container -->
+    <div class="toast-container" v-if="toasts && toasts.length > 0">
+      <div
+        v-for="t in toasts"
+        :key="t.id"
+        :class="['toast', 'toast-' + (t.type || 'info')]"
+      >
+        <span v-text="t.message"></span>
+        <button
+          type="button"
+          style="background: transparent; border: none; color: inherit; cursor: pointer; padding: 0 4px; font-size: 16px; margin-left: auto; line-height: 1;"
+          @click="removeToast(t.id)"
+          title="Tutup notifikasi"
+          aria-label="Tutup notifikasi"
+        >&times;</button>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="site-footer">
@@ -79,5 +162,10 @@
     </footer>
 
   </div>
+
+  <!-- Scripts (Dieksekusi secara berurutan setelah struktur DOM #app tersedia) -->
+  <script src="js/vue.js"></script>
+  <script src="js/services/api.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

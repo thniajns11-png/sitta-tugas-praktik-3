@@ -1,0 +1,321 @@
+<div class="do-tracking-component">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span v-text="'Pelacakan Pengiriman Bahan Ajar (Tracking DO)'"></span>
+    </h1>
+    <p v-text="'Lacak status pengiriman, rincian paket, dan riwayat perjalanan bahan ajar mahasiswa Universitas Terbuka'"></p>
+  </div>
+
+  <!-- Search Card -->
+  <div class="card mb-24">
+    <div class="card-body">
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div class="search-wrap" style="flex: 1; min-width: 280px;">
+          <span class="search-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            id="tracking-search-input"
+            type="text"
+            class="input-search"
+            v-model="keyword"
+            placeholder="Cari berdasarkan Nomor DO (mis. DO2025-0001) atau NIM Mahasiswa…"
+            @keyup.enter="search"
+            @keyup.esc="resetSearch"
+          />
+          <button
+            type="button"
+            class="btn-icon"
+            v-if="keyword"
+            @click="resetSearch"
+            title="Bersihkan pencarian (Esc)"
+            style="position: absolute; right: 8px; border: none;"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <button type="button" class="btn btn-primary" @click="search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>Lacak DO</span>
+        </button>
+
+        <button type="button" class="btn btn-secondary" v-if="hasSearched" @click="resetSearch">
+          <span>Reset</span>
+        </button>
+      </div>
+
+      <div style="margin-top: 8px; font-size: 12px; color: var(--c-muted); display: flex; gap: 16px;">
+        <span><kbd style="padding: 2px 5px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 4px; font-size: 11px;">Enter</kbd> untuk mencari</span>
+        <span><kbd style="padding: 2px 5px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 4px; font-size: 11px;">Esc</kbd> untuk membersihkan hasil</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 1: Belum Melakukan Pencarian -->
+  <div class="card" v-if="!hasSearched">
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <p style="font-weight: 600; color: var(--c-text); margin-bottom: 4px;">Belum ada pencarian aktif</p>
+      <p style="font-size: 13px; color: var(--c-muted); max-width: 440px; margin: 0 auto;">
+        Ketik Nomor Delivery Order (misalnya <code>DO2025-0001</code>) atau NIM Mahasiswa pada kolom pencarian di atas, lalu tekan <strong>Enter</strong>.
+      </p>
+    </div>
+  </div>
+
+  <!-- State 2: Hasil Tidak Ditemukan -->
+  <div class="card" v-else-if="searchResults.length === 0">
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <p style="font-weight: 600; color: var(--c-text); margin-bottom: 4px;">Data Pengiriman Tidak Ditemukan</p>
+      <p style="font-size: 13px; color: var(--c-muted); max-width: 440px; margin: 0 auto;">
+        Tidak ada data Delivery Order yang cocok dengan kata kunci "<strong>{{ activeQuery }}</strong>". Pastikan nomor DO atau NIM yang dimasukkan sudah benar.
+      </p>
+      <div style="margin-top: 16px;">
+        <button type="button" class="btn btn-secondary btn-sm" @click="resetSearch">
+          Bersihkan Pencarian
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 3: Hasil Ditemukan -->
+  <div v-else>
+
+    <!-- Daftar Hasil Pencarian (Muncul bila ada hasil, memudahkan pemilihan jika multi-hasil) -->
+    <div class="card mb-24" v-if="searchResults.length > 1">
+      <div class="card-header">
+        <span class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          Ditemukan {{ searchResults.length }} Delivery Order untuk kata kunci "{{ activeQuery }}"
+        </span>
+      </div>
+      <div class="card-body" style="padding: 12px;">
+        <div
+          v-for="item in searchResults"
+          :key="item.nomorDO"
+          class="do-list-item"
+          :style="selectedDONumber === item.nomorDO ? 'border-color: var(--c-accent); background: var(--c-surface);' : ''"
+          @click="selectDO(item.nomorDO)"
+        >
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="do-mono" v-text="item.nomorDO"></span>
+            <status-badge :status="item.status"></status-badge>
+            <span style="font-size: 13px; color: var(--c-text);">{{ item.nama }} (NIM: {{ item.nim }})</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--c-secondary);">
+            <span>{{ item.ekspedisi }}</span>
+            <span>{{ item.tanggalKirim | formatTanggal }}</span>
+            <button type="button" class="btn btn-sm" :class="selectedDONumber === item.nomorDO ? 'btn-primary' : 'btn-secondary'">
+              {{ selectedDONumber === item.nomorDO ? 'Sedang Dilihat' : 'Lihat Detail' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tampilan Detail DO Terpilih -->
+    <div class="tracking-layout" v-if="selectedDO">
+
+      <!-- Kolom Kiri: Riwayat Timeline & Form Tambah Progress -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- Card Timeline Perjalanan -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Riwayat Perjalanan Pengiriman
+            </span>
+            <span style="font-size: 12px; color: var(--c-muted);" v-if="selectedDO.perjalanan">
+              {{ selectedDO.perjalanan.length }} Catatan Perjalanan
+            </span>
+          </div>
+
+          <div class="card-body">
+            <!-- Timeline Ada Riwayat -->
+            <ul class="timeline" v-if="selectedDO.perjalanan && selectedDO.perjalanan.length > 0">
+              <li class="timeline-item" v-for="(p, index) in selectedDO.perjalanan" :key="index">
+                <span class="timeline-dot"></span>
+                <div class="timeline-time" v-text="p.waktu"></div>
+                <div class="timeline-desc" v-text="p.keterangan"></div>
+              </li>
+            </ul>
+
+            <!-- Timeline Kosong -->
+            <div v-else class="empty-state" style="padding: 24px 16px;">
+              <p style="font-size: 13.5px; color: var(--c-muted); margin: 0;">
+                Belum terdapat riwayat perjalanan untuk nomor DO ini.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card Tambah Riwayat Progress -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Tambah Riwayat Perjalanan
+            </span>
+            <span class="nomor-do-display" style="font-size: 12px; padding: 4px 8px;" v-text="selectedDO.nomorDO"></span>
+          </div>
+
+          <div class="card-body">
+            <div class="form-group mb-12">
+              <label for="progress-keterangan">
+                Keterangan Perjalanan Baru <span class="required-mark">*</span>
+              </label>
+              <textarea
+                id="progress-keterangan"
+                rows="3"
+                v-model="newProgressText"
+                :class="{ 'is-error': progressError }"
+                placeholder="Contoh: Paket telah tiba di DC Surabaya dan diproses untuk pengiriman kurir lokal…"
+                @keyup.enter.ctrl="submitProgress"
+              ></textarea>
+              <span class="error-msg" v-if="progressError" v-text="progressError"></span>
+            </div>
+
+            <p style="font-size: 12px; color: var(--c-muted); margin-bottom: 14px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              Waktu pencatatan akan digenerate otomatis menggunakan tanggal dan jam lokal komputer saat ini (YYYY-MM-DD HH:mm:ss).
+            </p>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                v-if="newProgressText"
+                @click="newProgressText = ''; progressError = '';"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                @click="submitProgress"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Tambah Catatan Perjalanan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Kolom Kanan: Ringkasan Informasi Pengiriman & Rincian Paket -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              Detail Pengiriman
+            </span>
+            <status-badge :status="selectedDO.status"></status-badge>
+          </div>
+
+          <div class="card-body" style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <div class="info-label mb-8">Nomor Delivery Order:</div>
+              <span class="nomor-do-display" v-text="selectedDO.nomorDO"></span>
+            </div>
+
+            <hr class="divider" style="margin: 2px 0;" />
+
+            <div class="info-grid">
+              <div>
+                <div class="info-label">NIM Mahasiswa</div>
+                <div class="info-value" v-text="selectedDO.nim || '—'"></div>
+              </div>
+              <div>
+                <div class="info-label">Nama Mahasiswa</div>
+                <div class="info-value" v-text="selectedDO.nama || '—'"></div>
+              </div>
+              <div>
+                <div class="info-label">Layanan Ekspedisi</div>
+                <div class="info-value" v-text="selectedDO.ekspedisi || '—'"></div>
+              </div>
+              <div>
+                <div class="info-label">Tanggal Pengiriman</div>
+                <div class="info-value">{{ selectedDO.tanggalKirim | formatTanggal }}</div>
+              </div>
+              <div style="grid-column: span 2;">
+                <div class="info-label">Paket Bahan Ajar</div>
+                <div class="info-value" style="font-weight: 600;">
+                  {{ selectedPaketNama }}
+                  <span style="font-size: 12px; font-weight: normal; color: var(--c-muted);" v-if="selectedDO.paket">
+                    ({{ selectedDO.paket }})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rincian Modul Buku dalam Paket -->
+            <div class="detail-box" style="margin-top: 4px;">
+              <div class="detail-box-title">Daftar Modul dalam Paket:</div>
+              <ul class="detail-list" v-if="selectedModulList.length > 0">
+                <li v-for="m in selectedModulList" :key="m.kode" style="padding: 4px 0; border-bottom: 1px dashed var(--c-border);">
+                  <strong style="font-family: monospace; color: var(--c-accent);" v-text="m.kode"></strong>:
+                  <span v-text="m.judul"></span>
+                </li>
+              </ul>
+              <div v-else style="font-size: 12px; color: var(--c-muted);">
+                Detail modul tidak tersedia untuk paket ini.
+              </div>
+            </div>
+
+            <!-- Total Biaya Pembayaran -->
+            <div class="total-box mt-8">
+              <span class="total-label">Total Biaya Bahan Ajar</span>
+              <span class="total-value">{{ selectedDO.total | rupiah }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
